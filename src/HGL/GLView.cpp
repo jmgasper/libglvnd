@@ -73,7 +73,7 @@ public:
 private:
     status_t Init();
 
-    pthread_mutex_t fLock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    pthread_mutex_t fLock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
     status_t fStatus = B_NO_INIT;
     void *libEgl {};
 
@@ -108,7 +108,7 @@ struct BGLView::Renderer {
         void GetSize(uint32_t &width, uint32_t &height) override;
         BBitmap *SetBitmap(BBitmap *bmp) override;
     } fBmpHook;
-    pthread_mutex_t fLock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER;
+    pthread_mutex_t fLock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
     ObjectDeleter<BBitmap> fBitmap;
 
     ~Renderer();
