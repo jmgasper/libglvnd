@@ -23,6 +23,7 @@
 # MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
 
 dep_be = cc.find_library('be')
+haiku_sysroot = meson.get_external_property('sys_root', '')
 
 libGL = shared_library(
   'GL',
@@ -33,7 +34,7 @@ libGL = shared_library(
   include_directories : [
     inc_include,
     inc_include_hgl,
-    '/boot/system/develop/headers/private/shared'
+    haiku_sysroot + '/boot/system/develop/headers/private/shared'
   ],
   link_args : '-Wl,-Bsymbolic',
   dependencies : [
