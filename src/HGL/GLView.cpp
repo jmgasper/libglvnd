@@ -21,10 +21,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <dlfcn.h>
+#include <math.h>
 #include <algorithm>
 
 #include <DirectWindow.h>
 #include <Referenceable.h>
+#include <Screen.h>
 
 #include <private/interface/DirectWindowPrivate.h>
 #include <private/shared/AutoDeleter.h>
@@ -121,6 +123,23 @@ struct BGLView::Renderer {
 
 
 BGLView::Display BGLView::sDisplay;
+
+
+// How many frame buffer pixels make up a view pixel: 1 unless the desktop is
+// scaled (air/OS). BScreen::DeviceScale() is looked up at run time, as
+// libbe has it only on air/OS.
+static float
+device_scale()
+{
+    typedef float (*DeviceScaleFunction)(BScreen *screen);
+    static DeviceScaleFunction deviceScaleFunction
+        = (DeviceScaleFunction)dlsym(RTLD_DEFAULT, "_ZN7BScreen11DeviceScaleEv");
+    if (deviceScaleFunction == NULL)
+        return 1;
+
+    BScreen screen(B_MAIN_SCREEN_ID);
+    return deviceScaleFunction(&screen);
+}
 
 
 BGLView::Display::Display()
@@ -439,8 +458,16 @@ BGLView::Draw(BRect updateRect)
         // for another one instead of being dropped.
         fRenderer->fInvalidatePending = false;
         if (fRenderer->fBitmap.IsSet()) {
-            DrawBitmap(fRenderer->fBitmap.Get(), B_ORIGIN);
-            region.Exclude(fRenderer->fBitmap->Bounds());
+            // The frame is rendered in view pixels and app_server enlarges
+            // it to the frame buffer. At a fractional scale the nearest
+            // pixel doubles every other row and column (a one pixel line
+            // turns one or two pixels wide); filtering keeps the image even,
+            // as macOS and Wayland compositors do. Whole scales stay exact.
+            float scale = device_scale();
+            uint32 options = scale != floorf(scale) ? B_FILTER_BITMAP_BILINEAR : 0;
+            BRect bounds = fRenderer->fBitmap->Bounds();
+            DrawBitmap(fRenderer->fBitmap.Get(), bounds, bounds, options);
+            region.Exclude(bounds);
         }
     }
     FillRegion(&region, B_SOLID_LOW);
